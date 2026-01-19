@@ -76,7 +76,7 @@ body {
   display:flex;
   gap:10px;
   flex-wrap:wrap;
-  margin-bottom:12px;
+  margin-bottom: 12px;
   align-items: center; 
 }
 
@@ -154,6 +154,7 @@ button, select, input, textarea {
   line-height: 1;
 }
 
+/* 5 Lines Heights Preserved */
 .text-box {
   background: var(--box-bg); 
   border-radius:22px;
@@ -183,6 +184,7 @@ button, select, input, textarea {
   resize: none;
 }
 
+/* 6-Box Stats Grid Preserved */
 .stats {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
@@ -226,9 +228,10 @@ button, select, input, textarea {
 
 .bksp-icon { font-size: 1.3em; color: var(--sub); }
 
-#leaderboardTable { width: 100%; border-collapse: collapse; margin: 15px 0; }
-#leaderboardTable th, #leaderboardTable td { padding: 10px; text-align: left; border-bottom: 1px solid var(--sub); }
+#leaderboardTable, #modTable { width: 100%; border-collapse: collapse; margin: 15px 0; }
+#leaderboardTable th, #leaderboardTable td, #modTable th, #modTable td { padding: 10px; text-align: left; border-bottom: 1px solid var(--sub); }
 .chart-container { background: var(--box-bg); padding: 15px; border-radius: 20px; margin-top: 15px; }
+.mod-action-btn { font-size: 0.7em; padding: 4px 8px; margin-right: 5px; }
 </style>
 </head>
 
@@ -292,7 +295,8 @@ button, select, input, textarea {
       <option value="">Select text</option>
       <option value="random">🎲 Random Text</option>
       <option value="quotes">📜 Famous Quotes</option>
-      <optgroup label="Favorites" id="favGroup"></optgroup>
+      <optgroup label="Approved Globally" id="approvedGroup"></optgroup>
+      <optgroup label="Your Favorites" id="favGroup"></optgroup>
     </select>
     <button class="btn-pill btn-orange" onclick="openContribute()">Contribute</button>
   </div>
@@ -317,6 +321,26 @@ button, select, input, textarea {
 
 </div>
 
+<div class="modal" id="modModal">
+  <div class="modal-content" style="max-width: 850px;">
+    <h2>Global Moderator Panel</h2>
+    <div style="max-height: 400px; overflow-y: auto;">
+        <table id="modTable">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Text Snippet</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="modList"></tbody>
+        </table>
+    </div>
+    <br>
+    <button class="btn-pill btn-purple" onclick="closeModPanel()">Close</button>
+  </div>
+</div>
+
 <div class="modal" id="rankModal">
   <div class="modal-content">
     <h2>Global Leaderboard</h2>
@@ -327,19 +351,6 @@ button, select, input, textarea {
     <h3>Your Progress History</h3>
     <div class="chart-container"><canvas id="performanceChart"></canvas></div>
     <br><button class="btn-pill btn-purple" onclick="closeLeaderboard()">Close</button>
-  </div>
-</div>
-
-<div class="modal" id="modModal">
-  <div class="modal-content">
-    <h2>Global Moderator</h2>
-    <div style="max-height: 400px; overflow-y: auto;">
-        <table id="modTable" style="width:100%">
-            <thead><tr><th>User</th><th>Snippet</th><th>Actions</th></tr></thead>
-            <tbody id="modList"></tbody>
-        </table>
-    </div>
-    <br><button class="btn-pill btn-purple" onclick="closeModPanel()">Close</button>
   </div>
 </div>
 
@@ -367,7 +378,6 @@ button, select, input, textarea {
 </div>
 
 <script>
-// --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
   apiKey: "AIzaSyCPvNSfaAX8wTLrbjwOEQWi-826UzlAnjo",
   authDomain: "typingtest-v3.firebaseapp.com",
@@ -382,12 +392,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let myChart = null;
+let globalApprovedTexts = {};
 
-// GITHUB AUTO-UPDATE FETCH
+// GITHUB AUTO-UPDATE FETCH preserved
 async function fetchLastUpdated() {
     try {
-        const repo = "TypingProplus";
-        const user = "ipsuman";
+        const repo = "TypingProplus"; const user = "ipsuman";
         const response = await fetch(`https://api.github.com/repos/${user}/${repo}/commits?per_page=1`);
         const data = await response.json();
         if (data && data[0]) {
@@ -398,7 +408,23 @@ async function fetchLastUpdated() {
 }
 fetchLastUpdated();
 
-const randomTexts = ["Innovation is the ability to see change as an opportunity, not a threat...", "The keyboard is mightier than the sword when used with precision...", "Data science is about using data to answer questions and solve problems..."];
+// --- NEW GLOBAL APPROVED SYNC ---
+function syncApprovedTexts() {
+    db.ref('approved_texts').on('value', (snapshot) => {
+        const group = document.getElementById("approvedGroup");
+        group.innerHTML = "";
+        globalApprovedTexts = snapshot.val() || {};
+        Object.keys(globalApprovedTexts).forEach((key) => {
+            const o = document.createElement("option");
+            o.value = "appr_" + key;
+            o.textContent = "Global: " + globalApprovedTexts[key].text.substring(0, 20) + "...";
+            group.appendChild(o);
+        });
+    });
+}
+syncApprovedTexts();
+
+const randomTexts = ["Innovation is the ability to see change as an opportunity...", "Technology is best when it brings people together...", "Data science is about using data to answer questions..."];
 const famousQuotes = ["To be, or not to be...", "May the Force be with you...", "Life is what happens when you're busy making other plans..."];
 
 let textDisplay = document.getElementById("text"), input = document.getElementById("input"), timeDisplay = document.getElementById("time");
@@ -411,27 +437,36 @@ const savedResults = JSON.parse(localStorage.getItem("results") || "[]");
 
 function handleSelectionChange() {
     const val = document.getElementById("selectionMenu").value;
-    if (val === "random") document.getElementById("customText").value = randomTexts[Math.floor(Math.random() * randomTexts.length)];
-    else if (val === "quotes") {
+    if (val === "random") {
+        document.getElementById("customText").value = randomTexts[Math.floor(Math.random() * randomTexts.length)];
+    } else if (val === "quotes") {
         let selected = []; let tempArr = [...famousQuotes];
         for(let i=0; i<Math.min(4, tempArr.length); i++) {
             let idx = Math.floor(Math.random() * tempArr.length);
             selected.push(tempArr.splice(idx, 1)[0]);
         }
         document.getElementById("customText").value = selected.join(" ");
-    } else if (val !== "") document.getElementById("customText").value = favorites[val];
+    } else if (val.startsWith("appr_")) {
+        const key = val.replace("appr_", "");
+        document.getElementById("customText").value = globalApprovedTexts[key].text;
+    } else if (val !== "") {
+        document.getElementById("customText").value = favorites[val];
+    }
     resetTestState();
 }
 
-function loadSelectionMenu() {
-  const group = document.getElementById("favGroup"); group.innerHTML = '';
-  favorites.forEach((t, i) => { const o = document.createElement("option"); o.value = i; o.textContent = "Fav " + (i + 1); group.appendChild(o); });
+function loadFavoritesMenu() {
+  const group = document.getElementById("favGroup");
+  group.innerHTML = '';
+  favorites.forEach((t, i) => {
+    const o = document.createElement("option"); o.value = i; o.textContent = "Favorite " + (i + 1); group.appendChild(o);
+  });
 }
-loadSelectionMenu();
+loadFavoritesMenu();
 
 function saveFavorite() {
   const txt = document.getElementById("customText").value.trim();
-  if(txt) { favorites.push(txt); localStorage.setItem("favorites", JSON.stringify(favorites)); loadSelectionMenu(); }
+  if(txt) { favorites.push(txt); localStorage.setItem("favorites", JSON.stringify(favorites)); loadFavoritesMenu(); }
 }
 
 function loadText(text) {
@@ -513,20 +548,48 @@ function initChart() {
     });
 }
 
+// MODERATOR AND GLOBAL APPROVAL LOGIC
 function checkAdmin() { document.getElementById("modBtn").style.display = (document.getElementById("username").value === "Admin") ? "block" : "none"; }
+
 function handleModPanelAccess() { if (prompt("Admin Password:") === "password123") openModPanel(); }
+
 function openModPanel() {
-    const list = document.getElementById("modList"); list.innerHTML = "Loading...";
+    const list = document.getElementById("modList");
+    list.innerHTML = "Loading...";
     db.ref('contributions').once('value', (snap) => {
-        list.innerHTML = ""; snap.forEach((child) => {
+        list.innerHTML = "";
+        snap.forEach((child) => {
             const k = child.key; const d = child.val();
-            list.innerHTML += `<tr><td>${d.user}</td><td>${d.text.substring(0, 30)}...</td><td><button class="btn-pill btn-brown" onclick="useContrib('${k}')">Use</button><button class="btn-pill btn-redblack" onclick="deleteContrib('${k}')">Del</button></td></tr>`;
+            list.innerHTML += `
+                <tr>
+                    <td>${d.user}</td>
+                    <td title="${d.text}">${d.text.substring(0, 30)}...</td>
+                    <td>
+                        <button class="btn-pill btn-brown mod-action-btn" onclick="useContrib('${k}')">Use</button>
+                        <button class="btn-pill btn-orange mod-action-btn" onclick="approveContrib('${k}')">Approve</button>
+                        <button class="btn-pill btn-redblack mod-action-btn" onclick="deleteContrib('${k}')">Del</button>
+                    </td>
+                </tr>`;
         });
     });
     document.getElementById("modModal").style.display = "flex";
 }
-function useContrib(k) { db.ref('contributions/' + k).once('value', s => { document.getElementById("customText").value = s.val().text; resetTestState(); closeModPanel(); }); }
-function deleteContrib(k) { if(confirm("Delete globally?")) db.ref('contributions/' + k).remove().then(() => openModPanel()); }
+
+function approveContrib(key) {
+    db.ref('contributions/' + key).once('value', (snapshot) => {
+        const data = snapshot.val();
+        if(data) {
+            db.ref('approved_texts').push(data).then(() => {
+                db.ref('contributions/' + key).remove();
+                alert("Text approved globally!");
+                openModPanel();
+            });
+        }
+    });
+}
+
+function deleteContrib(key) { if(confirm("Delete globally?")) db.ref('contributions/' + key).remove().then(() => openModPanel()); }
+function useContrib(key) { db.ref('contributions/' + key).once('value', s => { document.getElementById("customText").value = s.val().text; resetTestState(); closeModPanel(); }); }
 function closeModPanel() { document.getElementById("modModal").style.display = "none"; }
 function openContribute() { document.getElementById("contribModal").style.display = "flex"; }
 function closeContribute() { document.getElementById("contribModal").style.display = "none"; }
