@@ -145,7 +145,6 @@ button, select, input, textarea {
   margin-bottom: 15px;
 }
 
-/* Vibrating Timer Animation */
 #time {
   font-size: 4rem;
   font-weight: 800;
@@ -227,7 +226,6 @@ button, select, input, textarea {
   overflow-y: auto;
 }
 
-/* Footer Section */
 .footer-info {
   margin-top: 25px;
   text-align: center;
@@ -275,27 +273,9 @@ button, select, input, textarea {
   </div>
 
   <div class="row">
-    <div class="switch-container">
-        <span>Endless</span>
-        <label class="switch">
-            <input type="checkbox" id="endlessToggle" onchange="resetTestState()">
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="switch-container">
-        <span>Auto-Submit</span>
-        <label class="switch">
-            <input type="checkbox" id="autoSubmitToggle" checked>
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="switch-container" style="margin-left: auto;">
-        <span class="bksp-icon">⌫</span>
-        <label class="switch">
-            <input type="checkbox" checked onchange="toggleBackspace(this)">
-            <span class="slider"></span>
-        </label>
-    </div>
+    <div class="switch-container"><span>Endless</span><label class="switch"><input type="checkbox" id="endlessToggle" onchange="resetTestState()"><span class="slider"></span></label></div>
+    <div class="switch-container"><span>Auto-Submit</span><label class="switch"><input type="checkbox" id="autoSubmitToggle" checked><span class="slider"></span></label></div>
+    <div class="switch-container" style="margin-left: auto;"><span class="bksp-icon">⌫</span><label class="switch"><input type="checkbox" checked onchange="toggleBackspace(this)"><span class="slider"></span></label></div>
   </div>
 
   <textarea id="customText" oninput="resetTestState()" placeholder="Paste or type your custom typing text here..."></textarea>
@@ -340,7 +320,7 @@ button, select, input, textarea {
 <div class="modal" id="historyModal"><div class="modal-content"><h2>Local History</h2><div id="historyTable" style="max-height: 300px; overflow-y: auto;"></div><br><button class="btn-pill btn-brown" onclick="clearHistory()">Clear</button><button class="btn-pill btn-purple" onclick="closeHistory()">Close</button></div></div>
 
 <script>
-// --- FIREBASE CONFIGURATION preserved ---
+// --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
   apiKey: "AIzaSyCPvNSfaAX8wTLrbjwOEQWi-826UzlAnjo",
   authDomain: "typingtest-v3.firebaseapp.com",
@@ -357,11 +337,10 @@ const db = firebase.database();
 let myChart = null;
 let globalApprovedTexts = {};
 
-// GITHUB & VISITOR COUNT LOGIC
+// GITHUB & VISITOR COUNT
 async function fetchMetadata() {
     try {
-        const repo = "TypingProplus"; const user = "ipsuman";
-        const response = await fetch(`https://api.github.com/repos/${user}/${repo}/commits?per_page=1`);
+        const response = await fetch(`https://api.github.com/repos/ipsuman/TypingProplus/commits?per_page=1`);
         const data = await response.json();
         if (data && data[0]) {
             const date = new Date(data[0].commit.committer.date);
@@ -369,7 +348,6 @@ async function fetchMetadata() {
         }
     } catch (e) { document.getElementById("lastUpdated").innerText = "Not available"; }
 
-    // Global Visitor Count via Firebase Cloud
     const vRef = db.ref('visitor_count');
     vRef.transaction((curr) => (curr || 0) + 1, (err, comm, snap) => {
         if (comm) document.getElementById("visitorCount").innerText = snap.val();
@@ -396,12 +374,12 @@ function copyUPI() {
     navigator.clipboard.writeText(upi).then(() => {
         alert("UPI ID Copied: " + upi + "\n\nDo you like it? Send a 'Thankyou' note with any amount you like!");
     }).catch(() => {
-        alert("Do you like it? Send a 'Thankyou' note with any amount you like to this UPI ID: " + upi);
+        alert("UPI ID: " + upi + "\n\n(Please copy it manually if your browser blocked the automatic copy)");
     });
 }
 
-const randomTexts = ["Innovation is the ability to see change as an opportunity...", "Technology is best when it brings people together...", "Data science is about using data to answer questions..."];
-const famousQuotes = ["To be, or not to be...", "May the Force be with you...", "Life is what happens when you're busy making other plans..."];
+const randomTexts = ["Innovation is the ability to see change as an opportunity...", "Technology is best when it brings people together...", "Practice makes perfect when focus meets consistency..."];
+const famousQuotes = ["To be, or not to be...", "May the Force be with you...", "Life is what happens while you're making other plans..."];
 
 let textDisplay = document.getElementById("text"), input = document.getElementById("input"), timeDisplay = document.getElementById("time");
 let wpmDisplay = document.getElementById("wpm"), netDisplay = document.getElementById("net"), accDisplay = document.getElementById("acc");
@@ -414,14 +392,8 @@ const savedResults = JSON.parse(localStorage.getItem("results") || "[]");
 function handleSelectionChange() {
     const val = document.getElementById("selectionMenu").value;
     if (val === "random") document.getElementById("customText").value = randomTexts[Math.floor(Math.random() * randomTexts.length)];
-    else if (val === "quotes") {
-        let selected = []; let tempArr = [...famousQuotes];
-        for(let i=0; i<Math.min(4, tempArr.length); i++) {
-            let idx = Math.floor(Math.random() * tempArr.length);
-            selected.push(tempArr.splice(idx, 1)[0]);
-        }
-        document.getElementById("customText").value = selected.join(" ");
-    } else if (val.startsWith("appr_")) document.getElementById("customText").value = globalApprovedTexts[val.replace("appr_", "")].text;
+    else if (val === "quotes") document.getElementById("customText").value = famousQuotes[Math.floor(Math.random() * famousQuotes.length)];
+    else if (val.startsWith("appr_")) document.getElementById("customText").value = globalApprovedTexts[val.replace("appr_", "")].text;
     else if (val !== "") document.getElementById("customText").value = favorites[val];
     resetTestState();
 }
@@ -448,7 +420,7 @@ function resetTestState() {
   initialTime = parseInt(document.getElementById("timeMode").value);
   currentTime = initialTime;
   timeDisplay.innerText = `${Math.floor(currentTime/60).toString().padStart(2,'0')}:${(currentTime%60).toString().padStart(2,'0')}`;
-  timeDisplay.classList.remove("vibrate-active"); // Reset animation
+  timeDisplay.classList.remove("vibrate-active");
   input.value=""; input.disabled=false; backspaces = 0;
   wpmDisplay.innerText="0"; netDisplay.innerText="0"; accDisplay.innerText="100%";
   errRateDisplay.innerText="0"; backDisplay.innerText="0"; wrongDisplay.innerText="0";
@@ -468,29 +440,52 @@ function startTimer() {
   }, 1000);
 }
 
+// UPDATED ACCURACY CALCULATION
 function handleTyping() {
-  const typedWords = input.value.trim().split(/\s+/); const spans = [...textDisplay.querySelectorAll("span")];
-  if(input.value.length === 0) return;
-  let correctChars = 0, wrong = 0, half = 0, finished = false;
+  const typedWords = input.value.trim().split(/\s+/);
+  const spans = [...textDisplay.querySelectorAll("span")];
+  const targetText = spans.map(s => s.textContent).join("");
+  const typedText = input.value;
+  
+  if(typedText.length === 0) return;
+
+  let correctKeystrokes = 0;
+  let wrong = 0;
+  let half = 0;
+  let finished = false;
+
+  // Real-time Visuals (Per Word)
   spans.forEach((span, i) => {
     span.className = ""; const real = span.textContent.trim(); const typed = typedWords[i];
     if(!typed) return;
-    if(typed === real) { span.className = "correct"; correctChars += real.length; if(i === spans.length - 1) finished = true; } 
+    if(typed === real) { span.className = "correct"; if(i === spans.length - 1) finished = true; } 
     else if(real.startsWith(typed)) { span.className = "half"; half++; } else { span.className = "wrong"; wrong++; }
   });
-  wrongDisplay.innerText = wrong; const mins = ((initialTime - currentTime) / 60) || 0.001;
-  wpmDisplay.innerText = Math.round((input.value.length / 5) / mins);
-  accDisplay.innerText = Math.round((correctChars / input.value.length) * 100) + "%";
-  netDisplay.innerText = Math.max(0, Math.round(((input.value.length / 5) - ((wrong+half) * 5)) / mins));
+
+  // True Accuracy Calculation (Character-by-Character)
+  for(let j=0; j < typedText.length; j++) {
+      if(typedText[j] === targetText[j]) {
+          correctKeystrokes++;
+      }
+  }
+
+  wrongDisplay.innerText = wrong;
+  const totalKeystrokes = typedText.length;
+  const mins = ((initialTime - currentTime) / 60) || 0.001;
+  
+  wpmDisplay.innerText = Math.round((totalKeystrokes / 5) / mins);
+  
+  // Updated Accuracy Display
+  const accuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
+  accDisplay.innerText = (accuracy || 0) + "%";
+  
+  netDisplay.innerText = Math.max(0, Math.round(((totalKeystrokes / 5) - ((wrong+half) * 5)) / mins));
   if(document.getElementById("autoSubmitToggle").checked && finished && typedWords.length === spans.length) finishTest();
 }
 
 function finishTest() {
   clearInterval(timer); isRunning = false; input.disabled = true;
-  
-  // VIBRATE TIMER ON FINISH
   timeDisplay.classList.add("vibrate-active");
-
   const name = document.getElementById("username").value || "Guest";
   const result = { user: name, net: parseInt(netDisplay.innerText), acc: accDisplay.innerText, time: new Date().toLocaleString() };
   savedResults.push(result); localStorage.setItem("results", JSON.stringify(savedResults));
