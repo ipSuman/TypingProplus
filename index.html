@@ -354,7 +354,19 @@ async function fetchMetadata() {
     });
 }
 fetchMetadata();
-
+//UPDATED: SUPPORT DEVELOPER WITH COPY & MESSAGE
+function supportDeveloper() {
+    const upiId = "suman.5709-10@wahdfcbank";
+    const msg = "Liked it? You can send your response with any amount you like to my UPI ID";
+    
+    navigator.clipboard.writeText(upiId).then(() => {
+        alert(msg + "\n\n(UPI ID copied to clipboard: " + upiId + ")");
+    }).catch(() => {
+        // Fallback for browsers that block automatic copy
+        alert(msg + ": " + upiId);
+    });
+}
+  
 function syncApprovedTexts() {
     db.ref('approved_texts').on('value', (snapshot) => {
         const group = document.getElementById("approvedGroup");
