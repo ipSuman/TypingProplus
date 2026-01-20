@@ -175,6 +175,7 @@ button, select, input, textarea {
   margin-bottom: 15px;
 }
 
+.text-box span { border-radius: 4px; padding: 0 2px; }
 .text-box span.correct { color:var(--correct); }
 .text-box span.half { color:var(--half); }
 .text-box span.wrong { color:var(--wrong); }
@@ -203,9 +204,10 @@ button, select, input, textarea {
   border-radius:20px;
   padding:15px;
   text-align:center;
+  cursor: pointer;
 }
 .stat h3 { margin:0; font-size:.75em; color:var(--sub); text-transform: uppercase; }
-.stat p { margin:6px 0; font-size:1.5em; font-weight:bold; }
+.stat p { margin:6px 0 0; font-size:1.5em; font-weight:bold; }
 
 .modal {
   position:fixed;
@@ -290,7 +292,7 @@ button, select, input, textarea {
       <optgroup label="Your Favorites" id="favGroup"></optgroup>
     </select>
     <button class="btn-pill btn-orange" onclick="openContribute()">Contribute</button>
-    <button class="btn-pill btn-brown" onclick="copyUPI()">support developer ₹</button>
+    <button class="btn-pill btn-brown" onclick="supportDeveloper()">support developer ₹</button>
   </div>
 
   <div id="time">01:00</div>
@@ -299,12 +301,12 @@ button, select, input, textarea {
   <textarea id="input" class="input" placeholder="Start typing to begin..." onfocus="checkInit()"></textarea>
 
   <div class="stats">
-    <div class="stat"><h3>WPM</h3><p id="wpm">0</p></div>
-    <div class="stat"><h3>Net Speed</h3><p id="net">0</p></div>
-    <div class="stat"><h3>Accuracy</h3><p id="acc">100%</p></div>
-    <div class="stat"><h3>Error Rate</h3><p id="errRate">0</p></div>
-    <div class="stat"><h3>Backspaces</h3><p id="backCount">0</p></div>
-    <div class="stat"><h3>Wrong</h3><p id="wrongCount">0</p></div>
+    <div class="stat" onclick="showFormula('WPM')"><h3>WPM</h3><p id="wpm">0</p></div>
+    <div class="stat" onclick="showFormula('Net Speed')"><h3>Net Speed</h3><p id="net">0</p></div>
+    <div class="stat" onclick="showFormula('Accuracy')"><h3>Accuracy</h3><p id="acc">100%</p></div>
+    <div class="stat" onclick="showFormula('Error Rate')"><h3>Error Rate</h3><p id="errRate">0</p></div>
+    <div class="stat" onclick="showFormula('Backspaces')"><h3>Backspaces</h3><p id="backCount">0</p></div>
+    <div class="stat" onclick="showFormula('Wrong')"><h3>Wrong</h3><p id="wrongCount">0</p></div>
   </div>
 
   <div class="footer-info">
@@ -320,7 +322,7 @@ button, select, input, textarea {
 <div class="modal" id="historyModal"><div class="modal-content"><h2>Local History</h2><div id="historyTable" style="max-height: 300px; overflow-y: auto;"></div><br><button class="btn-pill btn-brown" onclick="clearHistory()">Clear</button><button class="btn-pill btn-purple" onclick="closeHistory()">Close</button></div></div>
 
 <script>
-// --- FIREBASE CONFIGURATION ---
+// --- FIREBASE CONFIGURATION preserved ---
 const firebaseConfig = {
   apiKey: "AIzaSyCPvNSfaAX8wTLrbjwOEQWi-826UzlAnjo",
   authDomain: "typingtest-v3.firebaseapp.com",
@@ -337,7 +339,6 @@ const db = firebase.database();
 let myChart = null;
 let globalApprovedTexts = {};
 
-// GITHUB & VISITOR COUNT
 async function fetchMetadata() {
     try {
         const response = await fetch(`https://api.github.com/repos/ipsuman/TypingProplus/commits?per_page=1`);
@@ -347,7 +348,6 @@ async function fetchMetadata() {
             document.getElementById("lastUpdated").innerText = date.toLocaleDateString() + " " + date.toLocaleTimeString();
         }
     } catch (e) { document.getElementById("lastUpdated").innerText = "Not available"; }
-
     const vRef = db.ref('visitor_count');
     vRef.transaction((curr) => (curr || 0) + 1, (err, comm, snap) => {
         if (comm) document.getElementById("visitorCount").innerText = snap.val();
@@ -368,14 +368,27 @@ function syncApprovedTexts() {
 }
 syncApprovedTexts();
 
-// UPI COPY LOGIC
 function copyUPI() {
-    const upi = "suman.5709-10@wahdfcbank";
-    navigator.clipboard.writeText(upi).then(() => {
-        alert("UPI ID Copied: " + upi + "\n\nDo you like it? Send a 'Thankyou' note with any amount you like!");
+    const upiId = "suman.5709-10@wahdfcbank";
+    const msg = "Liked it? You can send your response with any amount you like to my UPI ID";
+    navigator.clipboard.writeText(upiId).then(() => {
+        alert(msg + "\n\n(UPI ID copied to clipboard: " + upiId + ")");
     }).catch(() => {
-        alert("UPI ID: " + upi + "\n\n(Please copy it manually if your browser blocked the automatic copy)");
+        alert(msg + ": " + upiId);
     });
+}
+
+function showFormula(stat) {
+    let msg = "";
+    switch(stat) {
+        case 'WPM': msg = "WPM (Gross): Total characters typed divided by 5, then divided by time in minutes."; break;
+        case 'Net Speed': msg = "Net Speed (WPM): ((Total Characters / 5) - Mistakes) / Time in minutes."; break;
+        case 'Accuracy': msg = "Accuracy: (Correct Keystrokes / Total Typed Keystrokes) * 100%."; break;
+        case 'Error Rate': msg = "Error Rate: Total number of wrong and partially typed words."; break;
+        case 'Backspaces': msg = "Backspaces: Total count of backspace key presses detected."; break;
+        case 'Wrong': msg = "Wrong: Count of words where the spelling did not match the source."; break;
+    }
+    alert("Formula for " + stat + ":\n\n" + msg);
 }
 
 const randomTexts = ["Innovation is the ability to see change as an opportunity...", "Technology is best when it brings people together...", "Practice makes perfect when focus meets consistency..."];
@@ -392,8 +405,14 @@ const savedResults = JSON.parse(localStorage.getItem("results") || "[]");
 function handleSelectionChange() {
     const val = document.getElementById("selectionMenu").value;
     if (val === "random") document.getElementById("customText").value = randomTexts[Math.floor(Math.random() * randomTexts.length)];
-    else if (val === "quotes") document.getElementById("customText").value = famousQuotes[Math.floor(Math.random() * famousQuotes.length)];
-    else if (val.startsWith("appr_")) document.getElementById("customText").value = globalApprovedTexts[val.replace("appr_", "")].text;
+    else if (val === "quotes") {
+        let selected = []; let tempArr = [...famousQuotes];
+        for(let i=0; i<Math.min(4, tempArr.length); i++) {
+            let idx = Math.floor(Math.random() * tempArr.length);
+            selected.push(tempArr.splice(idx, 1)[0]);
+        }
+        document.getElementById("customText").value = selected.join(" ");
+    } else if (val.startsWith("appr_")) document.getElementById("customText").value = globalApprovedTexts[val.replace("appr_", "")].text;
     else if (val !== "") document.getElementById("customText").value = favorites[val];
     resetTestState();
 }
@@ -412,7 +431,12 @@ function saveFavorite() {
 function loadText(text) {
   textDisplay.innerHTML="";
   let finalString = document.getElementById("endlessToggle").checked ? (text + " ").repeat(60).trim() : text;
-  finalString.split(" ").forEach(word => { const span = document.createElement("span"); span.textContent = word + " "; textDisplay.appendChild(span); });
+  finalString.split(/\s+/).forEach(word => { 
+    const span = document.createElement("span"); 
+    span.textContent = word; 
+    textDisplay.appendChild(span);
+    textDisplay.appendChild(document.createTextNode(" "));
+  });
 }
 
 function resetTestState() {
@@ -429,8 +453,111 @@ function resetTestState() {
 }
 resetTestState();
 
-input.addEventListener("keydown", e => { if(e.key === "Backspace") { if(!backspaceOn) e.preventDefault(); else { backspaces++; backDisplay.innerText = backspaces; } } });
-input.addEventListener("input", () => { if (!isRunning && input.value.length > 0) startTimer(); handleTyping(); });
+input.addEventListener("keydown", e => { 
+    if(e.key === "Backspace") { 
+        if(!backspaceOn) e.preventDefault(); 
+        else { backspaces++; backDisplay.innerText = backspaces; } 
+    } 
+    // ENTER KEY MANUAL SUBMIT
+    if(e.key === "Enter") {
+        e.preventDefault();
+        finishTest();
+    }
+});
+
+input.addEventListener("input", () => { handleTyping(); });
+
+// IMPROVED TYPING LOGIC
+function handleTyping() {
+    if (!isRunning && input.value.length > 0) {
+        startTimer();
+    }
+
+    const typedRaw = input.value;
+    const targetTextClean = textDisplay.textContent;
+
+    let correctKeystrokes = 0;
+    let totalTypedKeystrokes = typedRaw.length;
+
+    const spans = [...textDisplay.querySelectorAll("span")];
+    spans.forEach(s => s.className = "");
+
+    let charIndex = 0;
+    let wrongWords = 0;
+    let partialWords = 0;
+    let firstUnfinishedFound = false;
+
+    for (let i = 0; i < spans.length; i++) {
+        const wordSpan = spans[i];
+        const expectedWord = wordSpan.textContent.trim();
+        let wordTyped = "";
+
+        while (charIndex < typedRaw.length && typedRaw[charIndex] !== " ") {
+            wordTyped += typedRaw[charIndex];
+            charIndex++;
+        }
+        
+        if (charIndex < typedRaw.length && typedRaw[charIndex] === " ") {
+            if (targetTextClean[charIndex] === " ") {
+                correctKeystrokes++; 
+            }
+            charIndex++; 
+        }
+
+        if (wordTyped === "" && charIndex >= typedRaw.length) {
+            continue;
+        }
+
+        if (!firstUnfinishedFound && (wordTyped.length < expectedWord.length || charIndex > typedRaw.length)) {
+            wordSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstUnfinishedFound = true;
+        }
+
+        if (wordTyped === expectedWord) {
+            wordSpan.className = "correct";
+            correctKeystrokes += expectedWord.length;
+        }
+        else if (expectedWord.startsWith(wordTyped)) {
+            wordSpan.className = "half";
+            partialWords++;
+            correctKeystrokes += wordTyped.length;
+        }
+        else {
+            wordSpan.className = "wrong";
+            wrongWords++;
+            let prefixLen = 0;
+            while (prefixLen < wordTyped.length && prefixLen < expectedWord.length &&
+                   wordTyped[prefixLen] === expectedWord[prefixLen]) {
+                prefixLen++;
+            }
+            correctKeystrokes += prefixLen;
+        }
+    }
+
+    const minsElapsed = ((initialTime - currentTime) / 60) || 0.001;
+    const grossWpm = Math.round((totalTypedKeystrokes / 5) / minsElapsed);
+    wpmDisplay.innerText = grossWpm;
+
+    const errorWords = wrongWords + Math.ceil(partialWords * 0.6);
+    const netWpm = Math.max(0, Math.round(((totalTypedKeystrokes / 5) - (errorWords * 5)) / minsElapsed));
+    netDisplay.innerText = netWpm;
+
+    const accuracy = totalTypedKeystrokes > 0
+        ? Math.round((correctKeystrokes / totalTypedKeystrokes) * 100)
+        : 100;
+    accDisplay.innerText = Math.min(accuracy, 100) + "%";
+
+    wrongDisplay.innerText = wrongWords;
+    errRateDisplay.innerText = (wrongWords + partialWords) + " errs";
+    backDisplay.innerText = backspaces;
+
+    const allCorrect = spans.every(s => s.className === "correct" || (s.textContent.trim() === "" && s.className === ""));
+    
+    // PRECISE AUTO-SUBMIT TRIGGER: Only once the full text is typed
+    if (document.getElementById("autoSubmitToggle").checked && allCorrect && typedRaw.length >= targetTextClean.length) {
+        finishTest();
+    }
+}
 
 function startTimer() {
   isRunning = true;
@@ -438,49 +565,6 @@ function startTimer() {
     if(currentTime > 0) { currentTime--; timeDisplay.innerText = `${Math.floor(currentTime/60).toString().padStart(2,'0')}:${(currentTime%60).toString().padStart(2,'0')}`; handleTyping(); } 
     else finishTest();
   }, 1000);
-}
-
-// UPDATED ACCURACY CALCULATION
-function handleTyping() {
-  const typedWords = input.value.trim().split(/\s+/);
-  const spans = [...textDisplay.querySelectorAll("span")];
-  const targetText = spans.map(s => s.textContent).join("");
-  const typedText = input.value;
-  
-  if(typedText.length === 0) return;
-
-  let correctKeystrokes = 0;
-  let wrong = 0;
-  let half = 0;
-  let finished = false;
-
-  // Real-time Visuals (Per Word)
-  spans.forEach((span, i) => {
-    span.className = ""; const real = span.textContent.trim(); const typed = typedWords[i];
-    if(!typed) return;
-    if(typed === real) { span.className = "correct"; if(i === spans.length - 1) finished = true; } 
-    else if(real.startsWith(typed)) { span.className = "half"; half++; } else { span.className = "wrong"; wrong++; }
-  });
-
-  // True Accuracy Calculation (Character-by-Character)
-  for(let j=0; j < typedText.length; j++) {
-      if(typedText[j] === targetText[j]) {
-          correctKeystrokes++;
-      }
-  }
-
-  wrongDisplay.innerText = wrong;
-  const totalKeystrokes = typedText.length;
-  const mins = ((initialTime - currentTime) / 60) || 0.001;
-  
-  wpmDisplay.innerText = Math.round((totalKeystrokes / 5) / mins);
-  
-  // Updated Accuracy Display
-  const accuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
-  accDisplay.innerText = (accuracy || 0) + "%";
-  
-  netDisplay.innerText = Math.max(0, Math.round(((totalKeystrokes / 5) - ((wrong+half) * 5)) / mins));
-  if(document.getElementById("autoSubmitToggle").checked && finished && typedWords.length === spans.length) finishTest();
 }
 
 function finishTest() {
@@ -520,7 +604,8 @@ function handleModPanelAccess() { if (prompt("Admin Password:") === "password123
 function openModPanel() {
     const list = document.getElementById("modList"); list.innerHTML = "Loading...";
     db.ref('contributions').once('value', (snap) => {
-        list.innerHTML = ""; snap.forEach((child) => {
+        list.innerHTML = "";
+        snap.forEach((child) => {
             const k = child.key; const d = child.val();
             list.innerHTML += `<tr><td>${d.user}</td><td>${d.text.substring(0, 30)}...</td><td><button class="btn-pill btn-brown mod-action-btn" onclick="useContrib('${k}')">Use</button><button class="btn-pill btn-orange mod-action-btn" onclick="approveContrib('${k}')">Approve</button><button class="btn-pill btn-redblack mod-action-btn" onclick="deleteContrib('${k}')">Del</button></td></tr>`;
         });
