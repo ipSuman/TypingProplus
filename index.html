@@ -127,7 +127,7 @@ button, select, input, textarea {
 }
 
 .btn-pill {
-  font-size: 0.8em;
+  font-size: 0.7em;
   padding: 8px 14px;
   font-weight: 600;
   cursor: pointer;
@@ -269,11 +269,8 @@ button, select, input, textarea {
     <select id="timeMode" onchange="resetTestState()">
       <option value="60">1 Minute</option>
       <option value="120">2 Minutes</option>
-      <option value="180">3 Minutes</option>
       <option value="300">5 Minutes</option>
       <option value="600">10 Minutes</option>
-      <option value="900">15 Minutes</option>
-      <option value="1800">30 Minutes</option>
     </select>
   </div>
 
@@ -294,7 +291,7 @@ button, select, input, textarea {
       <optgroup label="Approved Globally" id="approvedGroup"></optgroup>
       <optgroup label="Your Favorites" id="favGroup"></optgroup>
     </select>
-    <button class="btn-pill btn-orange" onclick="openContribute()">Contribute (Share your text!)</button>
+    <button class="btn-pill btn-orange" onclick="openContribute()">Contribute a text!</button>
     <button class="btn-pill btn-brown" onclick="supportDeveloper()">support developer ₹</button>
   </div>
 
@@ -357,25 +354,18 @@ async function fetchMetadata() {
     });
 }
 fetchMetadata();
-//UPDATED: SUPPORT DEVELOPER WITH COPY & MESSAGE
-function supportDeveloper() {
-    const upiId = "suman.5709-10@wahdfcbank";
-    const msg = "Liked it? You can send your response with any amount you like to my UPI ID";
-    
-    navigator.clipboard.writeText(upiId).then(() => {
-        alert(msg + "\n\n(UPI ID copied to clipboard: " + upiId + ")");
-    }).catch(() => {
-        // Fallback for browsers that block automatic copy
-        alert(msg + ": " + upiId);
-    });
-}
-  
+
+// UPDATED: Sync Approved Texts with User Names
 function syncApprovedTexts() {
     db.ref('approved_texts').on('value', (snapshot) => {
         const group = document.getElementById("approvedGroup");
-        group.innerHTML = ""; globalApprovedTexts = snapshot.val() || {};
+        group.innerHTML = "";
+        globalApprovedTexts = snapshot.val() || {};
         Object.keys(globalApprovedTexts).forEach((key) => {
-            const o = document.createElement("option"); o.value = "appr_" + key;
+            const data = globalApprovedTexts[key];
+            const o = document.createElement("option");
+            o.value = "appr_" + key;
+            // Changed "Global:" to the contributor's name
             o.textContent = (data.user || "Contributor") + ": " + data.text.substring(0, 20) + "...";
             group.appendChild(o);
         });
@@ -384,6 +374,16 @@ function syncApprovedTexts() {
 syncApprovedTexts();
 
 function copyUPI() {
+    const upiId = "suman.5709-10@wahdfcbank";
+    const msg = "Liked it? You can send your response with any amount you like to my UPI ID";
+    navigator.clipboard.writeText(upiId).then(() => {
+        alert(msg + "\n\n(UPI ID copied to clipboard: " + upiId + ")");
+    }).catch(() => {
+        alert(msg + ": " + upiId);
+    });
+}
+
+function supportDeveloper() {
     const upiId = "suman.5709-10@wahdfcbank";
     const msg = "Liked it? You can send your response with any amount you like to my UPI ID";
     navigator.clipboard.writeText(upiId).then(() => {
@@ -473,7 +473,7 @@ input.addEventListener("keydown", e => {
         if(!backspaceOn) e.preventDefault(); 
         else { backspaces++; backDisplay.innerText = backspaces; } 
     } 
-    // ENTER KEY MANUAL SUBMIT
+    // ENTER KEY MANUAL SUBMIT preserved
     if(e.key === "Enter") {
         e.preventDefault();
         finishTest();
@@ -482,21 +482,17 @@ input.addEventListener("keydown", e => {
 
 input.addEventListener("input", () => { handleTyping(); });
 
-// IMPROVED TYPING LOGIC
+// Typing Engine Logic preserved
 function handleTyping() {
     if (!isRunning && input.value.length > 0) {
         startTimer();
     }
-
     const typedRaw = input.value;
     const targetTextClean = textDisplay.textContent;
-
     let correctKeystrokes = 0;
     let totalTypedKeystrokes = typedRaw.length;
-
     const spans = [...textDisplay.querySelectorAll("span")];
     spans.forEach(s => s.className = "");
-
     let charIndex = 0;
     let wrongWords = 0;
     let partialWords = 0;
@@ -506,28 +502,23 @@ function handleTyping() {
         const wordSpan = spans[i];
         const expectedWord = wordSpan.textContent.trim();
         let wordTyped = "";
-
         while (charIndex < typedRaw.length && typedRaw[charIndex] !== " ") {
             wordTyped += typedRaw[charIndex];
             charIndex++;
         }
-        
         if (charIndex < typedRaw.length && typedRaw[charIndex] === " ") {
             if (targetTextClean[charIndex] === " ") {
                 correctKeystrokes++; 
             }
             charIndex++; 
         }
-
         if (wordTyped === "" && charIndex >= typedRaw.length) {
             continue;
         }
-
         if (!firstUnfinishedFound && (wordTyped.length < expectedWord.length || charIndex > typedRaw.length)) {
             wordSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
             firstUnfinishedFound = true;
         }
-
         if (wordTyped === expectedWord) {
             wordSpan.className = "correct";
             correctKeystrokes += expectedWord.length;
@@ -552,23 +543,17 @@ function handleTyping() {
     const minsElapsed = ((initialTime - currentTime) / 60) || 0.001;
     const grossWpm = Math.round((totalTypedKeystrokes / 5) / minsElapsed);
     wpmDisplay.innerText = grossWpm;
-
     const errorWords = wrongWords + Math.ceil(partialWords * 0.6);
     const netWpm = Math.max(0, Math.round(((totalTypedKeystrokes / 5) - (errorWords * 5)) / minsElapsed));
     netDisplay.innerText = netWpm;
-
     const accuracy = totalTypedKeystrokes > 0
         ? Math.round((correctKeystrokes / totalTypedKeystrokes) * 100)
         : 100;
     accDisplay.innerText = Math.min(accuracy, 100) + "%";
-
     wrongDisplay.innerText = wrongWords;
     errRateDisplay.innerText = (wrongWords + partialWords) + " errs";
     backDisplay.innerText = backspaces;
-
     const allCorrect = spans.every(s => s.className === "correct" || (s.textContent.trim() === "" && s.className === ""));
-    
-    // PRECISE AUTO-SUBMIT TRIGGER: Only once the full text is typed
     if (document.getElementById("autoSubmitToggle").checked && allCorrect && typedRaw.length >= targetTextClean.length) {
         finishTest();
     }
