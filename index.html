@@ -376,7 +376,7 @@ function syncApprovedTexts() {
         group.innerHTML = ""; globalApprovedTexts = snapshot.val() || {};
         Object.keys(globalApprovedTexts).forEach((key) => {
             const o = document.createElement("option"); o.value = "appr_" + key;
-            o.textContent = "Global: " + globalApprovedTexts[key].text.substring(0, 20) + "...";
+            o.textContent = (data.user || "Contributor") + ": " + data.text.substring(0, 20) + "...";
             group.appendChild(o);
         });
     });
@@ -615,7 +615,7 @@ function initChart() {
 }
 
 function checkAdmin() { document.getElementById("modBtn").style.display = (document.getElementById("username").value === "Admin") ? "block" : "none"; }
-function handleModPanelAccess() { if (prompt("Admin Password:") === "password123") openModPanel(); }
+function handleModPanelAccess() { if (prompt("Admin Password:") === "pswd_ips@567") openModPanel(); }
 function openModPanel() {
     const list = document.getElementById("modList"); list.innerHTML = "Loading...";
     db.ref('contributions').once('value', (snap) => {
