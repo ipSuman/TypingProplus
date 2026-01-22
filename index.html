@@ -600,7 +600,7 @@ function initChart() {
 }
 
 function checkAdmin() { document.getElementById("modBtn").style.display = (document.getElementById("username").value === "Admin") ? "block" : "none"; }
-function handleModPanelAccess() { if (prompt("Admin Password:") === "pswd_ips@567") openModPanel(); }
+function handleModPanelAccess() { if (prompt("Admin Password:") === "password123") openModPanel(); }
 function openModPanel() {
     const list = document.getElementById("modList"); list.innerHTML = "Loading...";
     db.ref('contributions').once('value', (snap) => {
